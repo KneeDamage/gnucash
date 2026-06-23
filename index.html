@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GNUCash Transaction Entry</title>
+<style>
+  :root {
+    --ink:       #1a1f2e;
+    --ink-soft:  #4a5168;
+    --rule:      #d8dce8;
+    --bg:        #f5f6fa;
+    --surface:   #ffffff;
+    --accent:    #2a52a0;
+    --accent-lt: #e8edf8;
+    --debit:     #c0392b;
+    --credit:    #1a7a4a;
+    --warn:      #e67e22;
+    --radius:    6px;
+    --mono:      'Courier New', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--ink);
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 3px solid var(--accent);
+  }
+  header .ledger-icon {
+    font-size: 22px;
+    line-height: 1;
+  }
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  header .sub {
+    font-size: 11px;
+    color: #8899bb;
+    margin-left: auto;
+    font-family: var(--mono);
+  }
+
+  .main-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .card-head {
+    background: var(--accent-lt);
+    border-bottom: 1px solid var(--rule);
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .card-body { padding: 16px; }
+
+  /* ── Grid layouts ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* ── Form elements ── */
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+  input[type="text"],
+  input[type="date"],
+  input[type="number"],
+  select,
+  textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--ink);
+    background: var(--surface);
+    transition: border-color 0.15s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%234a5168'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(42,82,160,0.1);
+  }
+  select:disabled { background-color: #f0f1f5; color: #aaa; cursor: not-allowed; }
+  textarea { resize: vertical; min-height: 60px; }
+
+  .field { margin-bottom: 0; }
+
+  /* ── Account selector cascade ── */
+  .account-cascade {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    align-items: end;
+  }
+  @media (max-width: 600px) {
+    .account-cascade { grid-template-columns: 1fr; }
+  }
+  .cascade-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--rule);
+    font-size: 18px;
+    padding-bottom: 2px;
+    display: none; /* hidden on mobile */
+  }
+  .account-full-path {
+    margin-top: 8px;
+    padding: 7px 10px;
+    background: var(--accent-lt);
+    border-radius: var(--radius);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    min-height: 32px;
+  }
+
+  /* ── Split rows ── */
+  .split-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .split-table th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding: 6px 8px;
+    border-bottom: 2px solid var(--rule);
+    background: var(--bg);
+  }
+  .split-table td {
+    padding: 6px 4px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--rule);
+  }
+  .split-table tr:last-child td { border-bottom: none; }
+  .split-table input, .split-table select {
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+  .split-table input[type="number"] {
+    font-family: var(--mono);
+    text-align: right;
+  }
+
+  .split-balance-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0 0;
+    border-top: 2px solid var(--rule);
+    margin-top: 6px;
+  }
+  .split-balance-row .balance-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--ink-soft);
+  }
+  .split-balance-row .balance-value {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .balanced   { color: var(--credit); }
+  .unbalanced { color: var(--debit); }
+
+  .btn-add-split {
+    margin-top: 10px;
+    background: none;
+    border: 1px dashed var(--accent);
+    color: var(--accent);
+    padding: 7px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 13px;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .btn-add-split:hover { background: var(--accent-lt); }
+
+  .btn-remove {
+    background: none;
+    border: none;
+    color: var(--debit);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    line-height: 1;
+  }
+  .btn-remove:hover { background: #fde8e6; }
+
+  /* ── Pending ledger ── */
+  #pending-list {
+    margin-top: 0;
+  }
+  .pending-item {
+    display: grid;
+    grid-template-columns: 90px 1fr auto auto 36px;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 13px;
+  }
+  .pending-item:last-child { border-bottom: none; }
+  .pending-date  { font-family: var(--mono); color: var(--ink-soft); font-size: 12px; }
+  .pending-desc  { font-weight: 500; }
+  .pending-accts { font-size: 11px; color: var(--ink-soft); }
+  .pending-amt   { font-family: var(--mono); font-weight: 700; text-align: right; }
+  .pending-amt.expense { color: var(--debit); }
+  .pending-amt.income  { color: var(--credit); }
+  .pending-remove { background: none; border: none; color: #bbb; cursor: pointer; font-size: 16px; }
+  .pending-remove:hover { color: var(--debit); }
+  .empty-state {
+    padding: 24px 0;
+    text-align: center;
+    color: #aab;
+    font-size: 13px;
+  }
+
+  /* ── Action buttons ── */
+  .actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .btn {
+    padding: 10px 22px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.15s, box-shadow 0.15s;
+  }
+  .btn:hover { opacity: 0.88; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: var(--bg); color: var(--ink); border: 1px solid var(--rule); }
+  .btn-export { background: var(--ink); color: #fff; }
+  .btn-export:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--ink);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    z-index: 999;
+    max-width: 300px;
+  }
+  #toast.show { opacity: 1; }
+  #toast.ok   { border-left: 4px solid var(--credit); }
+  #toast.err  { border-left: 4px solid var(--debit); }
+
+  /* ── Lock screen ── */
+  #lock-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+  .lock-box {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 36px 32px 28px;
+    width: 320px;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .lock-icon  { font-size: 40px; margin-bottom: 12px; }
+  .lock-title { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .lock-sub   { font-size: 12px; color: var(--ink-soft); margin-bottom: 24px; }
+  .lock-box input[type="password"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--rule);
+    border-radius: var(--radius);
+    font-size: 16px;
+    text-align: center;
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+    color: var(--ink);
+    background: var(--bg);
+    font-family: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .lock-box input[type="password"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(42,82,160,0.15);
+  }
+  .lock-box input[type="password"].shake {
+    border-color: var(--debit);
+    animation: shake 0.35s ease;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%      { transform: translateX(-8px); }
+    40%      { transform: translateX(8px); }
+    60%      { transform: translateX(-6px); }
+    80%      { transform: translateX(6px); }
+  }
+  .btn-unlock {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-unlock:hover { opacity: 0.88; }
+  .lock-error { margin-top: 10px; font-size: 12px; color: var(--debit); min-height: 16px; }
+  #app-content { display: none; }
+</style>
+</head>
+<body>
+
+<!-- ── Lock Screen ── -->
+<div id="lock-screen">
+  <div class="lock-box">
+    <div class="lock-icon">🔒</div>
+    <div class="lock-title">GNUCash Entry</div>
+    <div class="lock-sub">Enter your password to continue</div>
+    <input type="password" id="lock-input" placeholder="••••••••"
+           onkeydown="if(event.key==='Enter') unlock()">
+    <button class="btn-unlock" onclick="unlock()">Unlock</button>
+    <div class="lock-error" id="lock-error"></div>
+  </div>
+</div>
+
+<!-- ── App (hidden until unlocked) ── -->
+<div id="app-content">
+<header>
+  <span class="ledger-icon">📒</span>
+  <h1>GNUCash Transaction Entry</h1>
+  <span class="sub" id="hdr-count">0 pending</span>
+</header>
+
+<div class="main-wrap">
+
+  <!-- ── Transaction Header ── -->
+  <div class="card">
+    <div class="card-head">Transaction Details</div>
+    <div class="card-body">
+      <div class="grid-3" style="margin-bottom:12px">
+        <div class="field">
+          <label for="txn-date">Date</label>
+          <input type="date" id="txn-date">
+        </div>
+        <div class="field">
+          <label for="txn-num">Reference / Cheque No.</label>
+          <input type="text" id="txn-num" placeholder="Optional">
+        </div>
+        <div class="field">
+          <label for="txn-type">Transaction Type</label>
+          <select id="txn-type">
+            <option value="expense">Expense</option>
+            <option value="split">Split Expense</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label for="txn-desc">Description / Payee</label>
+          <input type="text" id="txn-desc" placeholder="e.g. Tesco, British Gas…">
+        </div>
+        <div class="field">
+          <label for="txn-notes">Notes</label>
+          <input type="text" id="txn-notes" placeholder="Optional memo">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Payment Account ── -->
+  <div class="card">
+    <div class="card-head">Paid From (Bank / Credit Card)</div>
+    <div class="card-body">
+      <div class="account-cascade" id="payment-cascade">
+        <div class="field">
+          <label>Account Type</label>
+          <select id="pay-l1" onchange="cascadePayment(1)">
+            <option value="">— select —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Account</label>
+          <select id="pay-l2" disabled onchange="cascadePayment(2)">
+            <option value="">— select type first —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Sub-account</label>
+          <select id="pay-l3" disabled>
+            <option value="">— optional —</option>
+          </select>
+        </div>
+      </div>
+      <div class="account-full-path" id="payment-path">No account selected</div>
+    </div>
+  </div>
+
+  <!-- ── Simple Expense ── -->
+  <div id="simple-section" class="card">
+    <div class="card-head">Expense Account &amp; Amount</div>
+    <div class="card-body">
+      <div class="account-cascade" style="margin-bottom:12px">
+        <div class="field">
+          <label>Category</label>
+          <select id="exp-l1" onchange="cascadeExpense(1)">
+            <option value="">— select —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Sub-category</label>
+          <select id="exp-l2" disabled onchange="cascadeExpense(2)">
+            <option value="">— select category first —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Detail</label>
+          <select id="exp-l3" disabled>
+            <option value="">— optional —</option>
+          </select>
+        </div>
+      </div>
+      <div class="account-full-path" id="expense-path" style="margin-bottom:12px">No account selected</div>
+      <div class="grid-2">
+        <div class="field">
+          <label for="simple-amount">Amount (£)</label>
+          <input type="number" id="simple-amount" min="0.01" step="0.01" placeholder="0.00">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Split Expense ── -->
+  <div id="split-section" class="card" style="display:none">
+    <div class="card-head">Split Lines</div>
+    <div class="card-body">
+      <table class="split-table" id="split-table">
+        <thead>
+          <tr>
+            <th style="width:28%">Category</th>
+            <th style="width:25%">Sub-category</th>
+            <th style="width:20%">Detail</th>
+            <th style="width:18%">Amount (£)</th>
+            <th style="width:9%"></th>
+          </tr>
+        </thead>
+        <tbody id="split-tbody">
+          <!-- rows injected by JS -->
+        </tbody>
+      </table>
+      <button class="btn-add-split" onclick="addSplitRow()">+ Add line</button>
+      <div class="split-balance-row">
+        <span class="balance-label">Total</span>
+        <span class="balance-value" id="split-total">£0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Add to Ledger ── -->
+  <div class="actions" style="margin-bottom:20px">
+    <button class="btn btn-primary" onclick="addTransaction()">Add to Ledger</button>
+    <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+  </div>
+
+  <!-- ── Pending Ledger ── -->
+  <div class="card">
+    <div class="card-head">Pending Transactions</div>
+    <div class="card-body">
+      <div id="pending-list"><div class="empty-state">No transactions yet — add one above.</div></div>
+      <div class="actions" style="margin-top:16px">
+        <button class="btn btn-export" id="export-btn" onclick="exportCSV()" disabled>Export CSV</button>
+        <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main-wrap -->
+
+<div id="toast"></div>
+
+</div><!-- /app-content -->
+
+<script>
+// ═══════════════════════════════════════════════════
+//  PASSWORD  — change this to your chosen password
+// ═══════════════════════════════════════════════════
+const APP_PASSWORD = "alcazares";
+
+function unlock() {
+  const input = document.getElementById('lock-input');
+  const error = document.getElementById('lock-error');
+  if (input.value === APP_PASSWORD) {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('app-content').style.display = 'block';
+    input.value = '';
+  } else {
+    error.textContent = 'Incorrect password — try again.';
+    input.classList.remove('shake');
+    void input.offsetWidth; // force reflow to restart animation
+    input.classList.add('shake');
+    input.value = '';
+    input.focus();
+    setTimeout(() => { error.textContent = ''; }, 3000);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  ACCOUNT TREE  — edit this to match your accounts
+//  Format: { "Display Name": { children... } }
+//  Leaf nodes: "Account Name": null
+// ═══════════════════════════════════════════════════
+const ACCOUNTS = {
+  "Assets": {
+    "Current Assets": {
+      "Current Account": null,
+      "Savings Account": null,
+      "Cash in Hand": null,
+      "Premium Bonds": null
+    },
+    "Fixed Assets": {
+      "Property": null,
+      "Vehicle": null
+    },
+    "Investments": {
+      "ISA": {
+        "Stocks & Shares ISA": null,
+        "Cash ISA": null
+      },
+      "Pension": null,
+      "General Investment": null
+    }
+  },
+  "Liabilities": {
+    "Credit Cards": {
+      "Visa": null,
+      "Mastercard": null,
+      "Amex": null
+    },
+    "Loans": {
+      "Mortgage": null,
+      "Car Loan": null,
+      "Personal Loan": null
+    }
+  },
+  "Income": {
+    "Salary": {
+      "Gross Salary": null,
+      "Bonus": null
+    },
+    "Interest": {
+      "Bank Interest": null,
+      "ISA Interest": null
+    },
+    "Other Income": {
+      "Rental Income": null,
+      "Freelance": null,
+      "Benefits": null
+    }
+  },
+  "Expenses": {
+    "Housing": {
+      "Mortgage / Rent": null,
+      "Council Tax": null,
+      "Buildings Insurance": null,
+      "Contents Insurance": null,
+      "Maintenance & Repairs": null,
+      "Cleaning": null
+    },
+    "Utilities": {
+      "Gas": null,
+      "Electricity": null,
+      "Water": null,
+      "Broadband": null,
+      "Mobile Phone": null,
+      "TV Licence": null
+    },
+    "Food & Groceries": {
+      "Supermarket": null,
+      "Eating Out": null,
+      "Takeaway": null,
+      "Coffee & Snacks": null
+    },
+    "Transport": {
+      "Fuel": null,
+      "Car Insurance": null,
+      "Road Tax": null,
+      "MOT & Servicing": null,
+      "Parking": null,
+      "Public Transport": null,
+      "Taxi / Rideshare": null
+    },
+    "Healthcare": {
+      "Prescriptions": null,
+      "Dental": null,
+      "Optical": null,
+      "GP / Private Medical": null,
+      "Pharmacy": null
+    },
+    "Personal Care": {
+      "Haircut": null,
+      "Clothing": null,
+      "Shoes": null,
+      "Toiletries": null
+    },
+    "Children": {
+      "Childcare": null,
+      "School Fees": null,
+      "School Trips": null,
+      "Uniform & Clothing": null,
+      "Toys & Activities": null
+    },
+    "Entertainment & Leisure": {
+      "Subscriptions": {
+        "Netflix": null,
+        "Spotify": null,
+        "Amazon Prime": null,
+        "Other Streaming": null
+      },
+      "Hobbies": null,
+      "Sports & Gym": null,
+      "Books & Magazines": null,
+      "Cinema & Events": null
+    },
+    "Holidays & Travel": {
+      "Flights": null,
+      "Accommodation": null,
+      "Holiday Spending": null,
+      "Travel Insurance": null
+    },
+    "Gifts & Charity": {
+      "Gifts": null,
+      "Charitable Donations": null
+    },
+    "Financial": {
+      "Bank Charges": null,
+      "Interest Paid": null,
+      "Financial Advice": null,
+      "Accountancy": null
+    },
+    "Education": {
+      "Courses & Training": null,
+      "Books": null
+    },
+    "Home Office": {
+      "Stationery": null,
+      "Software / Subscriptions": null,
+      "Equipment": null
+    },
+    "Pets": {
+      "Food": null,
+      "Vets": null,
+      "Insurance": null,
+      "Other": null
+    },
+    "Miscellaneous": {
+      "Other": null
+    }
+  },
+  "Equity": {
+    "Opening Balances": null,
+    "Retained Earnings": null
+  }
+};
+
+// ═══════════════════════════════════════════════════
+//  CASCADE HELPERS
+// ═══════════════════════════════════════════════════
+function getChildren(tree, keys) {
+  let node = tree;
+  for (const k of keys) {
+    if (!node || !node[k]) return null;
+    node = node[k];
+  }
+  return node;
+}
+
+function populateSelect(sel, options, placeholder) {
+  sel.innerHTML = `<option value="">${placeholder}</option>`;
+  if (options) {
+    Object.keys(options).forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k; opt.textContent = k;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+// Payment cascade
+function cascadePayment(level) {
+  const l1 = document.getElementById('pay-l1');
+  const l2 = document.getElementById('pay-l2');
+  const l3 = document.getElementById('pay-l3');
+  if (level <= 1) {
+    const kids = getChildren(ACCOUNTS, [l1.value]);
+    l2.disabled = !l1.value || !kids;
+    populateSelect(l2, kids, l1.value ? (kids ? '— select —' : '(leaf)') : '— select type first —');
+    l3.disabled = true;
+    populateSelect(l3, null, '— optional —');
+  }
+  if (level <= 2) {
+    const kids = getChildren(ACCOUNTS, [l1.value, l2.value]);
+    l3.disabled = !l2.value || !kids;
+    populateSelect(l3, kids, l2.value ? (kids ? '— select —' : '(leaf)') : '— optional —');
+  }
+  updatePathDisplay('pay-l1','pay-l2','pay-l3','payment-path');
+}
+
+// Expense cascade (simple form)
+function cascadeExpense(level) {
+  const l1 = document.getElementById('exp-l1');
+  const l2 = document.getElementById('exp-l2');
+  const l3 = document.getElementById('exp-l3');
+  if (level <= 1) {
+    const kids = getChildren(ACCOUNTS, [l1.value]);
+    l2.disabled = !l1.value || !kids;
+    populateSelect(l2, kids, l1.value ? (kids ? '— select —' : '(leaf)') : '— select category first —');
+    l3.disabled = true;
+    populateSelect(l3, null, '— optional —');
+  }
+  if (level <= 2) {
+    const kids = getChildren(ACCOUNTS, [l1.value, l2.value]);
+    l3.disabled = !l2.value || !kids;
+    populateSelect(l3, kids, l2.value ? (kids ? '— select —' : '(leaf)') : '— optional —');
+  }
+  updatePathDisplay('exp-l1','exp-l2','exp-l3','expense-path');
+}
+
+function updatePathDisplay(id1, id2, id3, pathId) {
+  const v1 = document.getElementById(id1).value;
+  const v2 = document.getElementById(id2).value;
+  const v3 = document.getElementById(id3).value;
+  const parts = [v1, v2, v3].filter(Boolean);
+  document.getElementById(pathId).textContent = parts.length ? parts.join(' → ') : 'No account selected';
+}
+
+// Split row cascade
+function cascadeSplit(rowIdx, level) {
+  const l1 = document.getElementById(`sl1-${rowIdx}`);
+  const l2 = document.getElementById(`sl2-${rowIdx}`);
+  const l3 = document.getElementById(`sl3-${rowIdx}`);
+  if (level <= 1) {
+    const kids = getChildren(ACCOUNTS, [l1.value]);
+    l2.disabled = !l1.value || !kids;
+    populateSelect(l2, kids, l1.value ? (kids ? '— select —' : '(leaf)') : '—');
+    l3.disabled = true;
+    populateSelect(l3, null, '—');
+  }
+  if (level <= 2) {
+    const kids = getChildren(ACCOUNTS, [l1.value, l2.value]);
+    l3.disabled = !l2.value || !kids;
+    populateSelect(l3, kids, l2.value ? (kids ? '— select —' : '(leaf)') : '—');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  SPLIT ROWS
+// ═══════════════════════════════════════════════════
+let splitRowCount = 0;
+
+function addSplitRow() {
+  const idx = splitRowCount++;
+  const tbody = document.getElementById('split-tbody');
+  const tr = document.createElement('tr');
+  tr.id = `split-row-${idx}`;
+
+  // Build L1 options for Expenses branch primarily
+  const l1opts = Object.keys(ACCOUNTS).map(k =>
+    `<option value="${k}">${k}</option>`).join('');
+
+  tr.innerHTML = `
+    <td>
+      <select id="sl1-${idx}" onchange="cascadeSplit(${idx},1)" style="width:100%">
+        <option value="">—</option>${l1opts}
+      </select>
+    </td>
+    <td>
+      <select id="sl2-${idx}" disabled onchange="cascadeSplit(${idx},2)" style="width:100%">
+        <option value="">—</option>
+      </select>
+    </td>
+    <td>
+      <select id="sl3-${idx}" disabled style="width:100%">
+        <option value="">—</option>
+      </select>
+    </td>
+    <td>
+      <input type="number" id="sa-${idx}" min="0.01" step="0.01" placeholder="0.00"
+             oninput="updateSplitTotal()" style="width:100%">
+    </td>
+    <td>
+      <button class="btn-remove" onclick="removeSplitRow(${idx})" title="Remove">×</button>
+    </td>`;
+  tbody.appendChild(tr);
+
+  // Pre-select Expenses for convenience
+  document.getElementById(`sl1-${idx}`).value = 'Expenses';
+  cascadeSplit(idx, 1);
+}
+
+function removeSplitRow(idx) {
+  const row = document.getElementById(`split-row-${idx}`);
+  if (row) row.remove();
+  updateSplitTotal();
+}
+
+function updateSplitTotal() {
+  let total = 0;
+  document.querySelectorAll('[id^="sa-"]').forEach(inp => {
+    const v = parseFloat(inp.value);
+    if (!isNaN(v)) total += v;
+  });
+  const el = document.getElementById('split-total');
+  el.textContent = '£' + total.toFixed(2);
+  el.className = 'balance-value ' + (total > 0 ? 'balanced' : '');
+}
+
+// ═══════════════════════════════════════════════════
+//  TRANSACTION TYPE TOGGLE
+// ═══════════════════════════════════════════════════
+document.getElementById('txn-type').addEventListener('change', function() {
+  const isSplit = this.value === 'split';
+  document.getElementById('simple-section').style.display = isSplit ? 'none' : '';
+  document.getElementById('split-section').style.display  = isSplit ? '' : 'none';
+  if (isSplit && document.getElementById('split-tbody').children.length === 0) {
+    addSplitRow(); addSplitRow();
+  }
+});
+
+// ═══════════════════════════════════════════════════
+//  INIT PAGE
+// ═══════════════════════════════════════════════════
+(function init() {
+  // Set today's date
+  document.getElementById('txn-date').value = new Date().toISOString().split('T')[0];
+
+  // Populate payment L1
+  const payL1 = document.getElementById('pay-l1');
+  Object.keys(ACCOUNTS).forEach(k => {
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = k;
+    payL1.appendChild(opt);
+  });
+  // Default to Assets
+  payL1.value = 'Assets';
+  cascadePayment(1);
+
+  // Populate expense L1
+  const expL1 = document.getElementById('exp-l1');
+  Object.keys(ACCOUNTS).forEach(k => {
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = k;
+    expL1.appendChild(opt);
+  });
+  // Default to Expenses
+  expL1.value = 'Expenses';
+  cascadeExpense(1);
+})();
+
+// ═══════════════════════════════════════════════════
+//  RESOLVE ACCOUNT PATH
+// ═══════════════════════════════════════════════════
+function resolveAccount(l1id, l2id, l3id) {
+  const v1 = document.getElementById(l1id).value;
+  const v2 = document.getElementById(l2id).value;
+  const v3 = document.getElementById(l3id).value;
+  return [v1, v2, v3].filter(Boolean).join(':');
+}
+
+function resolveSplitAccount(idx) {
+  const v1 = document.getElementById(`sl1-${idx}`).value;
+  const v2 = document.getElementById(`sl2-${idx}`).value;
+  const v3 = document.getElementById(`sl3-${idx}`).value;
+  return [v1, v2, v3].filter(Boolean).join(':');
+}
+
+// ═══════════════════════════════════════════════════
+//  PENDING STORE
+// ═══════════════════════════════════════════════════
+let pending = [];
+
+function addTransaction() {
+  const date   = document.getElementById('txn-date').value;
+  const desc   = document.getElementById('txn-desc').value.trim();
+  const num    = document.getElementById('txn-num').value.trim();
+  const notes  = document.getElementById('txn-notes').value.trim();
+  const type   = document.getElementById('txn-type').value;
+  const payAcc = resolveAccount('pay-l1','pay-l2','pay-l3');
+
+  if (!date)   { toast('Please enter a date.', 'err'); return; }
+  if (!desc)   { toast('Please enter a description.', 'err'); return; }
+  if (!payAcc) { toast('Please select a payment account.', 'err'); return; }
+
+  let splits = [];
+
+  if (type === 'split') {
+    const rows = document.querySelectorAll('[id^="split-row-"]');
+    rows.forEach(row => {
+      const idx = row.id.replace('split-row-','');
+      const acc = resolveSplitAccount(idx);
+      const amt = parseFloat(document.getElementById(`sa-${idx}`).value);
+      if (acc && !isNaN(amt) && amt > 0) {
+        splits.push({ account: acc, amount: amt });
+      }
+    });
+    if (splits.length === 0) { toast('Add at least one split line with an amount.','err'); return; }
+  } else {
+    const expAcc = resolveAccount('exp-l1','exp-l2','exp-l3');
+    const amt    = parseFloat(document.getElementById('simple-amount').value);
+    if (!expAcc) { toast('Please select an expense account.', 'err'); return; }
+    if (isNaN(amt) || amt <= 0) { toast('Please enter a valid amount.', 'err'); return; }
+    splits.push({ account: expAcc, amount: amt });
+  }
+
+  const total = splits.reduce((s,r)=>s+r.amount, 0);
+  const txn = { id: Date.now(), date, num, desc, notes, payAccount: payAcc, splits, total };
+  pending.push(txn);
+  renderPending();
+  toast(`Added: ${desc} — £${total.toFixed(2)}`, 'ok');
+  clearForm();
+}
+
+function renderPending() {
+  const el = document.getElementById('pending-list');
+  document.getElementById('hdr-count').textContent = `${pending.length} pending`;
+  document.getElementById('export-btn').disabled = pending.length === 0;
+
+  if (pending.length === 0) {
+    el.innerHTML = '<div class="empty-state">No transactions yet — add one above.</div>';
+    return;
+  }
+  el.innerHTML = pending.map(t => {
+    const accts = t.splits.map(s => s.account.split(':').pop()).join(', ');
+    const cls   = t.splits[0].account.startsWith('Income') ? 'income' : 'expense';
+    return `<div class="pending-item">
+      <span class="pending-date">${t.date}</span>
+      <div>
+        <div class="pending-desc">${esc(t.desc)}</div>
+        <div class="pending-accts">${esc(t.payAccount)} → ${esc(accts)}</div>
+      </div>
+      <span></span>
+      <span class="pending-amt ${cls}">£${t.total.toFixed(2)}</span>
+      <button class="pending-remove" onclick="removePending(${t.id})">×</button>
+    </div>`;
+  }).join('');
+}
+
+function removePending(id) {
+  pending = pending.filter(t => t.id !== id);
+  renderPending();
+}
+
+function clearAll() {
+  if (pending.length === 0) return;
+  if (!confirm(`Remove all ${pending.length} pending transactions?`)) return;
+  pending = [];
+  renderPending();
+}
+
+// ═══════════════════════════════════════════════════
+//  CSV EXPORT
+//  Format: date, num, description, notes,
+//          pay_account, split_account, amount
+//  One row per split line. GNUCash-compatible.
+// ═══════════════════════════════════════════════════
+function buildCSV() {
+  const rows = [['Date','Num','Description','Notes','Account','Split Account','Amount']];
+  pending.forEach(t => {
+    t.splits.forEach((s, i) => {
+      rows.push([
+        t.date,
+        t.num || '',
+        i === 0 ? t.desc : '',
+        i === 0 ? (t.notes || '') : '',
+        t.payAccount,
+        s.account,
+        s.amount.toFixed(2)
+      ]);
+    });
+  });
+  return rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+}
+
+function exportCSV() {
+  if (pending.length === 0) return;
+  const csv      = buildCSV();
+  const filename = `gnucash_${new Date().toISOString().slice(0,10)}.csv`;
+  const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  if (isIOS) {
+    // iOS Safari blocks programmatic downloads — copy to clipboard instead
+    navigator.clipboard.writeText(csv).then(() => {
+      toast(`CSV copied to clipboard — paste into Notes or Mail, save as ${filename}`, 'ok');
+    }).catch(() => {
+      // Fallback: show in a textarea the user can select and copy manually
+      showCSVModal(csv, filename);
+    });
+  } else {
+    // Normal download for desktop / Android
+    const blob = new Blob([csv], {type: 'text/csv'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast(`Exported ${pending.length} transaction(s)`, 'ok');
+  }
+}
+
+function showCSVModal(csv, filename) {
+  // Last-resort fallback: a modal with the CSV text ready to copy
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:8px;padding:20px;width:100%;max-width:500px">
+      <div style="font-weight:700;margin-bottom:8px">Copy CSV — save as ${filename}</div>
+      <textarea id="csv-modal-text" style="width:100%;height:200px;font-family:monospace;font-size:11px;border:1px solid #ccc;border-radius:4px;padding:8px" readonly>${csv}</textarea>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button onclick="document.getElementById('csv-modal-text').select();document.execCommand('copy');this.textContent='Copied!'"
+          style="flex:1;padding:10px;background:#2a52a0;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer">
+          Select &amp; Copy
+        </button>
+        <button onclick="this.closest('div[style]').remove()"
+          style="padding:10px 16px;background:#eee;border:none;border-radius:6px;font-size:14px;cursor:pointer">
+          Close
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  // Auto-select the text
+  setTimeout(() => {
+    const ta = document.getElementById('csv-modal-text');
+    ta.focus(); ta.select();
+  }, 100);
+}
+
+// ═══════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════
+function clearForm() {
+  document.getElementById('txn-date').value  = new Date().toISOString().split('T')[0];
+  document.getElementById('txn-num').value   = '';
+  document.getElementById('txn-desc').value  = '';
+  document.getElementById('txn-notes').value = '';
+  document.getElementById('txn-type').value  = 'expense';
+  document.getElementById('simple-section').style.display = '';
+  document.getElementById('split-section').style.display  = 'none';
+  document.getElementById('simple-amount').value = '';
+  document.getElementById('split-tbody').innerHTML = '';
+  splitRowCount = 0;
+  // Reset expense dropdowns
+  document.getElementById('exp-l1').value = 'Expenses';
+  cascadeExpense(1);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let toastTimer;
+function toast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = ''; }, 3200);
+}
+</script>
+</body>
+</html>
