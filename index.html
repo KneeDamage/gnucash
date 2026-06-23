@@ -134,7 +134,7 @@
   /* ── Account selector cascade ── */
   .account-cascade {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 8px;
     align-items: end;
   }
@@ -478,20 +478,26 @@
     <div class="card-body">
       <div class="account-cascade" style="margin-bottom:12px">
         <div class="field">
-          <label>Category</label>
+          <label>Type</label>
           <select id="exp-l1" onchange="cascadeExpense(1)">
             <option value="">— select —</option>
           </select>
         </div>
         <div class="field">
-          <label>Sub-category</label>
+          <label>L1 Category</label>
           <select id="exp-l2" disabled onchange="cascadeExpense(2)">
             <option value="">— select category first —</option>
           </select>
         </div>
         <div class="field">
-          <label>Detail</label>
-          <select id="exp-l3" disabled>
+          <label>L2 Category</label>
+          <select id="exp-l3" disabled onchange="cascadeExpense(3)">
+            <option value="">— optional —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>L3 Category</label>
+          <select id="exp-l4" disabled>
             <option value="">— optional —</option>
           </select>
         </div>
@@ -617,7 +623,7 @@ const ACCOUNTS = {
       "Mastercard": null
     }
   },
-  "Expenses": {
+  "04 Expenses": {
     "Groceries": {
       "Tesco": null,
       "Lidl": null,
@@ -655,7 +661,10 @@ const ACCOUNTS = {
     },
     "Personal Care": {
       "Haircut": null,
-      "Clothing": null,
+      "Clothing": {
+         "Sarah": null,
+         "Mark": null
+         },
       "Shoes": null,
       "Toiletries": null
     },
@@ -767,6 +776,7 @@ function cascadeExpense(level) {
   const l1 = document.getElementById('exp-l1');
   const l2 = document.getElementById('exp-l2');
   const l3 = document.getElementById('exp-l3');
+  const l4 = document.getElementById('exp-l4');
   if (level <= 1) {
     const kids = getChildren(ACCOUNTS, [l1.value]);
     l2.disabled = !l1.value || !kids;
@@ -777,15 +787,25 @@ function cascadeExpense(level) {
   if (level <= 2) {
     const kids = getChildren(ACCOUNTS, [l1.value, l2.value]);
     l3.disabled = !l2.value || !kids;
-    populateSelect(l3, kids, l2.value ? (kids ? '— select —' : '(leaf)') : '— optional —');
+    populateSelect(l3, kids, l2.value ? (kids ? '— select —' : '(leaf)') : '— select category first —');
+    l3.disabled = false;
+    l4.disabled = true;
+    populateSelect(l4, null, '— optional —');
   }
-  updatePathDisplay('exp-l1','exp-l2','exp-l3','expense-path');
+  if (level <= 3) {
+    const kids = getChildren(ACCOUNTS, [l1.value, l2.value, l3.value]);
+    l4.disabled = !l3.value || !kids;
+    l3.disabled = false;
+    populateSelect(l4, kids, l3.value ? (kids ? '— select —' : '(leaf)') : '— optional —');
+  }
+  updatePathDisplay('exp-l1','exp-l2','exp-l3','expense-path','exp-l4');
 }
 
-function updatePathDisplay(id1, id2, id3, pathId) {
+function updatePathDisplay(id1, id2, id3, pathId, id4) {
   const v1 = document.getElementById(id1).value;
   const v2 = document.getElementById(id2).value;
   const v3 = document.getElementById(id3).value;
+  // 18:14 23/06/2026const v4 = document.getElementById(id4).value;
   const parts = [v1, v2, v3].filter(Boolean);
   document.getElementById(pathId).textContent = parts.length ? parts.join(' → ') : 'No account selected';
 }
@@ -850,7 +870,7 @@ function addSplitRow() {
   tbody.appendChild(tr);
 
   // Pre-select Expenses for convenience
-  document.getElementById(`sl1-${idx}`).value = 'Expenses';
+  document.getElementById(`sl1-${idx}`).value = '04 Expenses';
   cascadeSplit(idx, 1);
 }
 
@@ -897,9 +917,20 @@ document.getElementById('txn-type').addEventListener('change', function() {
     opt.value = k; opt.textContent = k;
     payL1.appendChild(opt);
   });
-  // Default to Assets
-  payL1.value = 'Assets';
-  cascadePayment(1);
+  // Default to Mastercard
+  payL1.value = '02 Liabilities';
+  cascadePayment(1)
+
+  // Populate payment L2
+  const payL2 = document.getElementById('pay-l2');
+  Object.keys(ACCOUNTS).forEach(k => {
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = k;
+    payL2.appendChild(opt);
+  });
+  // Default to Mastercard
+  payL2.value = 'Mastercard';
+  cascadePayment(2)
 
   // Populate expense L1
   const expL1 = document.getElementById('exp-l1');
@@ -909,25 +940,45 @@ document.getElementById('txn-type').addEventListener('change', function() {
     expL1.appendChild(opt);
   });
   // Default to Expenses
-  expL1.value = 'Expenses';
+  expL1.value = '04 Expenses';
   cascadeExpense(1);
 })();
 
 // ═══════════════════════════════════════════════════
 //  RESOLVE ACCOUNT PATH
 // ═══════════════════════════════════════════════════
-function resolveAccount(l1id, l2id, l3id) {
-  const v1 = document.getElementById(l1id).value;
-  const v2 = document.getElementById(l2id).value;
-  const v3 = document.getElementById(l3id).value;
-  return [v1, v2, v3].filter(Boolean).join(':');
+// function resolveAccount(l1id, l2id, l3id, l4id) {
+//   const v1 = document.getElementById(l1id).value;
+//   const v2 = document.getElementById(l2id).value;
+//   const v3 = document.getElementById(l3id).value;
+//   const v4 = document.getElementById(l4id).value;
+//   return [v1, v2, v3, v4].filter(Boolean).join(':');
+// }
+
+function resolveAccount(l1id, l2id, l3id, l4id, isPayAccount = false) {
+  const v1 = document.getElementById(l1id)?.value || '';
+  const v2 = document.getElementById(l2id)?.value || '';
+  const v3 = document.getElementById(l3id)?.value || '';
+
+  // Only read level 4 if it's an expense account
+  const v4 = isPayAccount
+    ? '' 
+    : (document.getElementById(l4id)?.value || '');
+
+  return [v1, v2, v3, v4].filter(Boolean).join(':');
 }
+
+
+
+
+
 
 function resolveSplitAccount(idx) {
   const v1 = document.getElementById(`sl1-${idx}`).value;
   const v2 = document.getElementById(`sl2-${idx}`).value;
   const v3 = document.getElementById(`sl3-${idx}`).value;
-  return [v1, v2, v3].filter(Boolean).join(':');
+  const v4 = document.getElementById(`sl4-${idx}`).value;
+  return [v1, v2, v3, v4].filter(Boolean).join(':');
 }
 
 // ═══════════════════════════════════════════════════
@@ -969,7 +1020,7 @@ function addTransaction() {
   const num    = document.getElementById('txn-num').value.trim();
   const notes  = document.getElementById('txn-notes').value.trim();
   const type   = document.getElementById('txn-type').value;
-  const payAcc = resolveAccount('pay-l1','pay-l2','pay-l3');
+  const payAcc = resolveAccount('pay-l1','pay-l2','pay-l3',null, true);
 
   if (!date)   { toast('Please enter a date.', 'err'); return; }
   if (!desc)   { toast('Please enter a description.', 'err'); return; }
@@ -989,7 +1040,7 @@ function addTransaction() {
     });
     if (splits.length === 0) { toast('Add at least one split line with an amount.','err'); return; }
   } else {
-    const expAcc = resolveAccount('exp-l1','exp-l2','exp-l3');
+    const expAcc = resolveAccount('exp-l1','exp-l2','exp-l3', 'exp-l4', false);
     const amt    = parseFloat(document.getElementById('simple-amount').value);
     if (!expAcc) { toast('Please select an expense account.', 'err'); return; }
     if (isNaN(amt) || amt <= 0) { toast('Please enter a valid amount.', 'err'); return; }
@@ -1150,7 +1201,7 @@ function clearForm() {
   document.getElementById('split-tbody').innerHTML = '';
   splitRowCount = 0;
   // Reset expense dropdowns
-  document.getElementById('exp-l1').value = 'Expenses';
+  document.getElementById('exp-l1').value = '04 Expenses';
   cascadeExpense(1);
 }
 
