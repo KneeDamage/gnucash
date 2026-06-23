@@ -313,10 +313,95 @@
   #toast.show { opacity: 1; }
   #toast.ok   { border-left: 4px solid var(--credit); }
   #toast.err  { border-left: 4px solid var(--debit); }
+
+  /* ── Lock screen ── */
+  #lock-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+  .lock-box {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 36px 32px 28px;
+    width: 320px;
+    max-width: 90vw;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .lock-icon  { font-size: 40px; margin-bottom: 12px; }
+  .lock-title { font-size: 18px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .lock-sub   { font-size: 12px; color: var(--ink-soft); margin-bottom: 24px; }
+  .lock-box input[type="password"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--rule);
+    border-radius: var(--radius);
+    font-size: 16px;
+    text-align: center;
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+    color: var(--ink);
+    background: var(--bg);
+    font-family: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .lock-box input[type="password"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(42,82,160,0.15);
+  }
+  .lock-box input[type="password"].shake {
+    border-color: var(--debit);
+    animation: shake 0.35s ease;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%      { transform: translateX(-8px); }
+    40%      { transform: translateX(8px); }
+    60%      { transform: translateX(-6px); }
+    80%      { transform: translateX(6px); }
+  }
+  .btn-unlock {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-unlock:hover { opacity: 0.88; }
+  .lock-error { margin-top: 10px; font-size: 12px; color: var(--debit); min-height: 16px; }
+  #app-content { display: none; }
 </style>
 </head>
 <body>
 
+<!-- ── Lock Screen ── -->
+<div id="lock-screen">
+  <div class="lock-box">
+    <div class="lock-icon">🔒</div>
+    <div class="lock-title">GNUCash Entry</div>
+    <div class="lock-sub">Enter your password to continue</div>
+    <input type="password" id="lock-input" placeholder="••••••••"
+           onkeydown="if(event.key==='Enter') unlock()">
+    <button class="btn-unlock" onclick="unlock()">Unlock</button>
+    <div class="lock-error" id="lock-error"></div>
+  </div>
+</div>
+
+<!-- ── App (hidden until unlocked) ── -->
+<div id="app-content">
 <header>
   <span class="ledger-icon">📒</span>
   <h1>GNUCash Transaction Entry</h1>
@@ -469,7 +554,32 @@
 
 <div id="toast"></div>
 
+</div><!-- /app-content -->
+
 <script>
+// ═══════════════════════════════════════════════════
+//  PASSWORD  — change this to your chosen password
+// ═══════════════════════════════════════════════════
+const APP_PASSWORD = "alcazares";
+
+function unlock() {
+  const input = document.getElementById('lock-input');
+  const error = document.getElementById('lock-error');
+  if (input.value === APP_PASSWORD) {
+    document.getElementById('lock-screen').style.display = 'none';
+    document.getElementById('app-content').style.display = 'block';
+    input.value = '';
+  } else {
+    error.textContent = 'Incorrect password — try again.';
+    input.classList.remove('shake');
+    void input.offsetWidth; // force reflow to restart animation
+    input.classList.add('shake');
+    input.value = '';
+    input.focus();
+    setTimeout(() => { error.textContent = ''; }, 3000);
+  }
+}
+
 // ═══════════════════════════════════════════════════
 //  ACCOUNT TREE  — edit this to match your accounts
 //  Format: { "Display Name": { children... } }
@@ -928,15 +1038,14 @@ function clearAll() {
 //          pay_account, split_account, amount
 //  One row per split line. GNUCash-compatible.
 // ═══════════════════════════════════════════════════
-function exportCSV() {
-  if (pending.length === 0) return;
+function buildCSV() {
   const rows = [['Date','Num','Description','Notes','Account','Split Account','Amount']];
   pending.forEach(t => {
     t.splits.forEach((s, i) => {
       rows.push([
         t.date,
         t.num || '',
-        i === 0 ? t.desc : '',          // description only on first row
+        i === 0 ? t.desc : '',
         i === 0 ? (t.notes || '') : '',
         t.payAccount,
         s.account,
@@ -944,15 +1053,61 @@ function exportCSV() {
       ]);
     });
   });
-  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = `gnucash_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  toast(`Exported ${pending.length} transactions`, 'ok');
+  return rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+}
+
+function exportCSV() {
+  if (pending.length === 0) return;
+  const csv      = buildCSV();
+  const filename = `gnucash_${new Date().toISOString().slice(0,10)}.csv`;
+  const isIOS    = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  if (isIOS) {
+    // iOS Safari blocks programmatic downloads — copy to clipboard instead
+    navigator.clipboard.writeText(csv).then(() => {
+      toast(`CSV copied to clipboard — paste into Notes or Mail, save as ${filename}`, 'ok');
+    }).catch(() => {
+      // Fallback: show in a textarea the user can select and copy manually
+      showCSVModal(csv, filename);
+    });
+  } else {
+    // Normal download for desktop / Android
+    const blob = new Blob([csv], {type: 'text/csv'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast(`Exported ${pending.length} transaction(s)`, 'ok');
+  }
+}
+
+function showCSVModal(csv, filename) {
+  // Last-resort fallback: a modal with the CSV text ready to copy
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:8px;padding:20px;width:100%;max-width:500px">
+      <div style="font-weight:700;margin-bottom:8px">Copy CSV — save as ${filename}</div>
+      <textarea id="csv-modal-text" style="width:100%;height:200px;font-family:monospace;font-size:11px;border:1px solid #ccc;border-radius:4px;padding:8px" readonly>${csv}</textarea>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button onclick="document.getElementById('csv-modal-text').select();document.execCommand('copy');this.textContent='Copied!'"
+          style="flex:1;padding:10px;background:#2a52a0;color:#fff;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer">
+          Select &amp; Copy
+        </button>
+        <button onclick="this.closest('div[style]').remove()"
+          style="padding:10px 16px;background:#eee;border:none;border-radius:6px;font-size:14px;cursor:pointer">
+          Close
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  // Auto-select the text
+  setTimeout(() => {
+    const ta = document.getElementById('csv-modal-text');
+    ta.focus(); ta.select();
+  }, 100);
 }
 
 // ═══════════════════════════════════════════════════
