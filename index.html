@@ -623,7 +623,7 @@ const ACCOUNTS = {
       "Mastercard": null
     }
   },
-  "04 Expenses": {
+  "05 Expenses": {
     "Groceries": {
       "Tesco": null,
       "Lidl": null,
@@ -870,7 +870,7 @@ function addSplitRow() {
   tbody.appendChild(tr);
 
   // Pre-select Expenses for convenience
-  document.getElementById(`sl1-${idx}`).value = '04 Expenses';
+  document.getElementById(`sl1-${idx}`).value = '05 Expenses';
   cascadeSplit(idx, 1);
 }
 
@@ -940,7 +940,7 @@ document.getElementById('txn-type').addEventListener('change', function() {
     expL1.appendChild(opt);
   });
   // Default to Expenses
-  expL1.value = '04 Expenses';
+  expL1.value = '05 Expenses';
   cascadeExpense(1);
 })();
 
@@ -1201,7 +1201,7 @@ function clearForm() {
   document.getElementById('split-tbody').innerHTML = '';
   splitRowCount = 0;
   // Reset expense dropdowns
-  document.getElementById('exp-l1').value = '04 Expenses';
+  document.getElementById('exp-l1').value = '05 Expenses';
   cascadeExpense(1);
 }
 
