@@ -584,6 +584,7 @@ async function unlock() {
     document.getElementById('lock-screen').style.display = 'none';
     document.getElementById('app-content').style.display = 'block';
     input.value = '';
+    loadPending();
   } else {
     error.textContent = 'Incorrect password — try again.';
     input.classList.remove('shake');
@@ -965,6 +966,34 @@ function resolveSplitAccount(idx) {
 }
 
 // ═══════════════════════════════════════════════════
+//  PERSISTENT STORAGE  (localStorage — device only)
+// ═══════════════════════════════════════════════════
+const STORAGE_KEY = 'gnucash_pending_v1';
+
+function savePending() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(pending));
+  } catch(e) {
+    console.warn('Could not save to localStorage:', e);
+  }
+}
+
+function loadPending() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      pending = JSON.parse(raw);
+      renderPending();
+      if (pending.length > 0) {
+        toast(`Restored ${pending.length} saved transaction${pending.length > 1 ? 's' : ''}`, 'ok');
+      }
+    }
+  } catch(e) {
+    console.warn('Could not load from localStorage:', e);
+  }
+}
+
+// ═══════════════════════════════════════════════════
 //  PENDING STORE
 // ═══════════════════════════════════════════════════
 let pending = [];
@@ -1005,6 +1034,7 @@ function addTransaction() {
   const total = splits.reduce((s,r)=>s+r.amount, 0);
   const txn = { id: Date.now(), date, num, desc, notes, payAccount: payAcc, splits, total };
   pending.push(txn);
+  savePending();
   renderPending();
   toast(`Added: ${desc} — £${total.toFixed(2)}`, 'ok');
   clearForm();
@@ -1037,6 +1067,7 @@ function renderPending() {
 
 function removePending(id) {
   pending = pending.filter(t => t.id !== id);
+  savePending();
   renderPending();
 }
 
@@ -1044,6 +1075,7 @@ function clearAll() {
   if (pending.length === 0) return;
   if (!confirm(`Remove all ${pending.length} pending transactions?`)) return;
   pending = [];
+  savePending();
   renderPending();
 }
 
@@ -1081,6 +1113,7 @@ function exportCSV() {
     // iOS Safari blocks programmatic downloads — copy to clipboard instead
     navigator.clipboard.writeText(csv).then(() => {
       toast(`CSV copied to clipboard — paste into Notes or Mail, save as ${filename}`, 'ok');
+      offerClearAfterExport();
     }).catch(() => {
       // Fallback: show in a textarea the user can select and copy manually
       showCSVModal(csv, filename);
@@ -1095,7 +1128,19 @@ function exportCSV() {
     a.click();
     URL.revokeObjectURL(url);
     toast(`Exported ${pending.length} transaction(s)`, 'ok');
+    offerClearAfterExport();
   }
+}
+
+function offerClearAfterExport() {
+  // Small delay so the toast is visible first
+  setTimeout(() => {
+    if (confirm(`Export done.\n\nClear the ${pending.length} exported transaction(s) from the list?\n\nTap OK to clear, Cancel to keep them.`)) {
+      pending = [];
+      savePending();
+      renderPending();
+    }
+  }, 400);
 }
 
 function showCSVModal(csv, filename) {
