@@ -608,124 +608,101 @@ async function unlock() {
 //  Leaf nodes: "Account Name": null
 // ═══════════════════════════════════════════════════
 const ACCOUNTS = {
-  "01 Assets": {
-    "02 Bank Accounts": {
-      "Santander UK": null,
-      "Sabadell ESP": null
+  "01 Assets" {
+    "02 Bank Accounts" {
+      "Santander UK" null,
+      "Sabadell ESP" null
     },
-    "01 Cash in Hand": {
-      "Euros Cash": null,
-      "GBP Cash": null
+    "01 Cash in Hand" {
+      "Euros Cash" null,
+      "GBP Cash" null
     }
   },
-  "02 Liabilities": {
-    "Mastercard": {
-      "Mastercard": null
+  "02 Liabilities" {
+    "Mastercard" {
+      "Mastercard" null
     }
   },
-  "05 Expenses": {
-    "Groceries": {
-      "Tesco": null,
-      "Lidl": null,
-      "Other": null
-    },
-    "Transport": {
-      "Fuel": null,
-      "Parking": null,
-      "Tolls": null,
-      "Broadband": null,
-      "Mobile Phone": null,
-      "TV Licence": null
-    },
-    "Food & Groceries": {
-      "Supermarket": null,
-      "Eating Out": null,
-      "Takeaway": null,
-      "Coffee & Snacks": null
-    },
-    "Transport": {
-      "Fuel": null,
-      "Car Insurance": null,
-      "Road Tax": null,
-      "MOT & Servicing": null,
-      "Parking": null,
-      "Public Transport": null,
-      "Taxi / Rideshare": null
-    },
-    "Healthcare": {
-      "Prescriptions": null,
-      "Dental": null,
-      "Optical": null,
-      "GP / Private Medical": null,
-      "Pharmacy": null
-    },
-    "Personal Care": {
-      "Haircut": null,
-      "Clothing": {
-         "Sarah": null,
-         "Mark": null
-         },
-      "Shoes": null,
-      "Toiletries": null
-    },
-    "Children": {
-      "Childcare": null,
-      "School Fees": null,
-      "School Trips": null,
-      "Uniform & Clothing": null,
-      "Toys & Activities": null
-    },
-    "Entertainment & Leisure": {
-      "Subscriptions": {
-        "Netflix": null,
-        "Spotify": null,
-        "Amazon Prime": null,
-        "Other Streaming": null
-      },
-      "Hobbies": null,
-      "Sports & Gym": null,
-      "Books & Magazines": null,
-      "Cinema & Events": null
-    },
-    "Holidays & Travel": {
-      "Flights": null,
-      "Accommodation": null,
-      "Holiday Spending": null,
-      "Travel Insurance": null
-    },
-    "Gifts & Charity": {
-      "Gifts": null,
-      "Charitable Donations": null
-    },
-    "Financial": {
-      "Bank Charges": null,
-      "Interest Paid": null,
-      "Financial Advice": null,
-      "Accountancy": null
-    },
-    "Education": {
-      "Courses & Training": null,
-      "Books": null
-    },
-    "Home Office": {
-      "Stationery": null,
-      "Software / Subscriptions": null,
-      "Equipment": null
-    },
-    "Pets": {
-      "Food": null,
-      "Vets": null,
-      "Insurance": null,
-      "Other": null
-    },
-    "Miscellaneous": {
-      "Other": null
-    }
-  },
-  "Equity": {
-    "Opening Balances": null,
-    "Retained Earnings": null
-  }
+  "05 Expenses" {
+    "Groceries" {
+      "Lidl", null,
+      "Tesco", null,
+      "Other", null },
+    "Leisure" {
+      "Eating Out" {
+        "Coffee", null,
+        "General", null,
+        "Occasion", null },
+      "Hobbies" {
+        "Cycling", null,
+        "Motorcycling", null,
+        "Photography", null },
+      "Magazines" {
+    "Transport" {
+      "Fuel", null,
+      "Parking", null },
+    "Automotive" {
+      "Cleaning", null,
+      "Miscellaneous", null,
+      "Repair", null,
+      "Servicing", null },
+    "Clothing" {
+      "Sarah", null,
+      "Mark", null },
+    "Gifts" {
+      "Birthday - Ben", null,
+      "Birthday - Joe", null,
+      "Birthday - Mark", null,
+      "Birthday - Sarah", null,
+      "Charity", null,
+      "Christmas", null,
+      "Family - Other", null,
+      "Non-Family - Other", null },
+    "Health and Wellbeing" {
+      "Barber", null,
+      "Hairdresser", null,
+      "Personal Care Products", null,
+      "Dental Care", null,
+      "Eye Care", null,
+      "Flu Vac", null,
+      "Medical Services", null,
+      "Sporting Equipment", null,
+      "Swimming", null },
+    "Holiday" {
+      "Groceries" {
+      "Eating Out" {
+        "Coffee and Snacks", null,
+        "Drinks", null,
+        "Meals", null,
+        "TakeAway", null },
+      "Travel" {
+        "Fuel", null,
+        "Parking", null,
+        "Tolls and Fees", null },
+      "Miscellaneous", null,
+      "Accommodation", null,
+      "Activities", null },
+    "Miscellaneous and Admin" {
+      "Postage", null,
+      "Unidentified Spend", null },
+    "Property Maintenance UK" {
+      "Decorating", null,
+      "Furnishings", null,
+      "Gardening", null,
+      "Repairs", null,
+      "Sundries", null },
+    "Spain Apartment" {
+      "Property Maintenace" {
+        "Air Con", null,
+        "Contents", null,
+        "Decorating", null,
+        "Maintenance", null,
+        "Plumbing", null },
+    "Transport" {
+      "Fuel", null,
+      "Parking", null },
+    "Work" {
+      "Expenses Not Reimbursed", null },
 };
 
 // ═══════════════════════════════════════════════════
