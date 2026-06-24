@@ -423,13 +423,15 @@
           <label for="txn-num">Reference / Cheque No.</label>
           <input type="text" id="txn-num" placeholder="Optional">
         </div>
+        
         <div class="field">
-          <label for="txn-type">Transaction Type</label>
-          <select id="txn-type">
-            <option value="expense">Expense</option>
-            <option value="split">Split Expense</option>
+          <label for="quick-type">Quick Entry</label>
+          <select id="quick-type" onchange="applyPreset()">
+            <option value="">— select preset —</option>
           </select>
         </div>
+
+        
       </div>
       <div class="grid-2">
         <div class="field">
@@ -723,6 +725,25 @@ const ACCOUNTS = {
 };
 
 // ═══════════════════════════════════════════════════
+//  QUICK ENTRY PRESETS — edit this list anytime
+//  Format:
+//  "Preset Name": {
+//      desc: "Description text",
+//      exp: ["L1", "L2", "L3", "L4"]
+//  }
+// ═══════════════════════════════════════════════════
+const PRESETS = {
+  "Groceries": {
+    desc: "Tesco Stores",
+    exp: ["05 Expenses", "Groceries", "Tesco", ""]
+  },
+  "Transport": {
+    desc: "Sainsbury PFS",
+    exp: ["05 Expenses", "Transport", "Fuel", ""]
+  }
+};
+
+// ═══════════════════════════════════════════════════
 //  CASCADE HELPERS
 // ═══════════════════════════════════════════════════
 function getChildren(tree, keys) {
@@ -822,6 +843,38 @@ function cascadeSplit(rowIdx, level) {
   }
 }
 
+function applyPreset() {
+  const key = document.getElementById('quick-type').value;
+  if (!key) return;
+
+  const p = PRESETS[key];
+
+  // Fill description
+  document.getElementById('txn-desc').value = p.desc;
+
+  // Fill expense cascade
+  const [l1, l2, l3, l4] = p.exp;
+
+  document.getElementById('exp-l1').value = l1;
+  cascadeExpense(1);
+
+  if (l2) {
+    document.getElementById('exp-l2').value = l2;
+    cascadeExpense(2);
+  }
+
+  if (l3) {
+    document.getElementById('exp-l3').value = l3;
+    cascadeExpense(3);
+  }
+
+  if (l4) {
+    document.getElementById('exp-l4').value = l4;
+  }
+
+  updatePathDisplay('exp-l1','exp-l2','exp-l3','expense-path','exp-l4');
+}
+
 // ═══════════════════════════════════════════════════
 //  SPLIT ROWS
 // ═══════════════════════════════════════════════════
@@ -902,6 +955,15 @@ document.getElementById('txn-type').addEventListener('change', function() {
 (function init() {
   // Set today's date
   document.getElementById('txn-date').value = new Date().toISOString().split('T')[0];
+  
+  // Populate Quick Entry presets
+  const qt = document.getElementById('quick-type');
+  Object.keys(PRESETS).forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    qt.appendChild(opt);
+  });
 
   // Populate payment L1
   const payL1 = document.getElementById('pay-l1');
