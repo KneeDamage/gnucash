@@ -423,15 +423,12 @@
           <label for="txn-num">Reference / Cheque No.</label>
           <input type="text" id="txn-num" placeholder="Optional">
         </div>
-        
         <div class="field">
           <label for="quick-type">Quick Entry</label>
           <select id="quick-type" onchange="applyPreset()">
             <option value="">— select preset —</option>
           </select>
         </div>
-
-        
       </div>
       <div class="grid-2">
         <div class="field">
@@ -938,33 +935,12 @@ function updateSplitTotal() {
 }
 
 // ═══════════════════════════════════════════════════
-//  TRANSACTION TYPE TOGGLE
-// ═══════════════════════════════════════════════════
-document.getElementById('txn-type').addEventListener('change', function() {
-  const isSplit = this.value === 'split';
-  document.getElementById('simple-section').style.display = isSplit ? 'none' : '';
-  document.getElementById('split-section').style.display  = isSplit ? '' : 'none';
-  if (isSplit && document.getElementById('split-tbody').children.length === 0) {
-    addSplitRow(); addSplitRow();
-  }
-});
-
-// ═══════════════════════════════════════════════════
 //  INIT PAGE
 // ═══════════════════════════════════════════════════
 (function init() {
   // Set today's date
   document.getElementById('txn-date').value = new Date().toISOString().split('T')[0];
   
-  // Populate Quick Entry presets
-  const qt = document.getElementById('quick-type');
-  Object.keys(PRESETS).forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    qt.appendChild(opt);
-  });
-
   // Populate payment L1
   const payL1 = document.getElementById('pay-l1');
   Object.keys(ACCOUNTS).forEach(k => {
@@ -997,18 +973,20 @@ document.getElementById('txn-type').addEventListener('change', function() {
   // Default to Expenses
   expL1.value = '05 Expenses';
   cascadeExpense(1);
+
+  // Populate Quick Entry presets
+  const qt = document.getElementById('quick-type');
+  Object.keys(PRESETS).forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    qt.appendChild(opt);
+  });
 })();
 
 // ═══════════════════════════════════════════════════
 //  RESOLVE ACCOUNT PATH
 // ═══════════════════════════════════════════════════
-// function resolveAccount(l1id, l2id, l3id, l4id) {
-//   const v1 = document.getElementById(l1id).value;
-//   const v2 = document.getElementById(l2id).value;
-//   const v3 = document.getElementById(l3id).value;
-//   const v4 = document.getElementById(l4id).value;
-//   return [v1, v2, v3, v4].filter(Boolean).join(':');
-// }
 
 function resolveAccount(l1id, l2id, l3id, l4id, isPayAccount = false) {
   const v1 = document.getElementById(l1id)?.value || '';
