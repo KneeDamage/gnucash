@@ -433,7 +433,7 @@
       <div class="grid-2">
         <div class="field">
           <label for="txn-desc">Description / Payee</label>
-          <input type="text" id="txn-desc" placeholder="e.g. Tesco, British Gas…">
+          <input type="text" id="txn-desc" placeholder="e.g. , British Gas…">
         </div>
         <div class="field">
           <label for="txn-notes">Notes</label>
@@ -623,7 +623,7 @@ const ACCOUNTS = {
   },
   "05 Expenses": {
     "Groceries": {
-      "Tesco": null,
+      "": null,
       "Lidl": null,
       "Other": null
     },
@@ -731,7 +731,7 @@ const ACCOUNTS = {
 // ═══════════════════════════════════════════════════
 const PRESETS = {
   "Tesco Groceries": {
-    desc: "Midsomer Norton Tesco Stores 2880",
+    desc: "Tesco Midsomer Norton",
     note: "",
     exp: ["05 Expenses", "Groceries", "Tesco", ""]
   },
@@ -741,17 +741,17 @@ const PRESETS = {
     exp: ["05 Expenses", "Groceries", "Lidl", ""]
   },
   "Fuel Murco": {
-    desc: "Murco PFS",
+    desc: "Murco Paulton PFS",
     note: "#C300",
     exp: ["05 Expenses", "Transport", "Fuel", ""]
   },
   "Fuel Tesco": {
-    desc: "Tesco PFS",
+    desc: "Tesco PFS Midsomer Norton",
     note: "#C300",
     exp: ["05 Expenses", "Transport", "Fuel", ""]
   },
   "Fuel - Sains": {
-    desc: "Sainsbury PFS",
+    desc: "Sainsburys PFS Bath",
     note: "#C300",
     exp: ["05 Expenses", "Transport", "Fuel", ""]
   }
